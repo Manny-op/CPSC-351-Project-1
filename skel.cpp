@@ -71,6 +71,25 @@ void computeHash(const string& hashProgName)
 	.
 	.
 	*/
+	FILE *fp;
+	fp = popen("cmdLine /bin/ls", "r"); 
+	//using the hash program name, will read and run the command
+
+	//read the program output into the buffer
+	if(fread(hashValue, sizeof(char), sizeof(char) * MAX_FILE_NAME_LENGTH, fp) < 0)
+	{
+		perror("fread");
+		exit(-1);
+	}
+	
+	//close the file pointer representing the program output
+	if(pclose(fp) < 0)
+	{
+		perror("perror");
+		exit(-1);
+	}
+
+
 
 
 
@@ -79,6 +98,19 @@ void computeHash(const string& hashProgName)
 	 .
 	 .
 	*/
+
+	if(write(childToParentPipe[WRITE_END], hashValue, sizeof(hashValue)) < 0)
+	{
+		perror("write error");
+		exit(-1);
+	}
+
+	//close write end of the child-to-parent
+	if(close(childToParentPipe[WRITE_END]) < 0){
+		perror("close");
+		exit(-1);
+	}
+
 
 	/* The child terminates */
 	exit(0);
