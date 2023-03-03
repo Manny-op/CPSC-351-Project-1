@@ -33,6 +33,7 @@ int childToParentPipe[2];
 const string hashProgs[] = {"md5sum", "sha1sum", "sha224sum", "sha256sum", "sha384sum", "sha512sum"};
 
 string fileName;
+char fileNames[MAX_FILE_NAME_LENGTH];
 
 /**
  * The function called by a child
@@ -71,6 +72,25 @@ void computeHash(const string& hashProgName)
 	.
 	.
 	*/
+	FILE *fp;
+	fp = popen("cmdLine /bin/ls", "r"); 
+	//using the hash program name, will read and run the command
+
+	//read the program output into the buffer
+	if(fread(hashValue, sizeof(char), sizeof(char) * MAX_FILE_NAME_LENGTH, fp) < 0)
+	{
+		perror("fread");
+		exit(-1);
+	}
+	
+	//close the file pointer representing the program output
+	if(pclose(fp) < 0)
+	{
+		perror("perror");
+		exit(-1);
+	}
+
+
 
 
 
@@ -79,6 +99,19 @@ void computeHash(const string& hashProgName)
 	 .
 	 .
 	*/
+
+	if(write(childToParentPipe[WRITE_END], hashValue, sizeof(hashValue)) < 0)
+	{
+		perror("write error");
+		exit(-1);
+	}
+
+	//close write end of the child-to-parent
+	if(close(childToParentPipe[WRITE_END]) < 0){
+		perror("close");
+		exit(-1);
+	}
+
 
 	/* The child terminates */
 	exit(0);
@@ -112,23 +145,25 @@ void parentFunc(const string& hashProgName)
 	memset(hashValue, (char)NULL, HASH_VALUE_LENGTH);
 
 
+
+
 	/* TODO: Send the string to the child	 */
-	/* come back to
-	if (write(parentToChildPipe[WRITE_END], , sizeof()) < 0)
+	
+	if (write(parentToChildPipe[WRITE_END], fileNames , sizeof(MAX_FILE_NAME_LENGTH)) < 0)
 	{
 		 perror("write");
 		 exit(-1);
 	}
-	*/
+	
 
 
 	/* TODO: Read the string sent by the child	  */
-	/*  Come back to
+	
 	if (read(childToParentPipe[READ_END], hashValue, sizeof(hashValue)) < 0)
 	{
 		   perror("read");
 		   exit(-1);
-	} */
+	} 
 
 	/* Print the hash value */
 	fprintf(stdout, "%s HASH VALUE: %s\n", hashProgName.c_str(), hashValue);
@@ -148,6 +183,7 @@ int main(int argc, char** argv)
 
 	/* Save the name of the file */
 	fileName = argv[1];
+	strncpy(fileNames, fileName.c_str(), sizeof(fileNames));
 
 	/* The process id */
 	pid_t pid;
